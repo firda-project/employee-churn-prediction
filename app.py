@@ -12,12 +12,12 @@ nav = {
     ],
     "Prediction": [
         st.Page(
-            'pages\predict_single.py',
+            'pages/predict_single.py',
             title='Single Prediction',
             icon="👤"
         ),
         st.Page(
-            'pages\predict_batch.py',
+            'pages/predict_batch.py',
             title='Batch Prediction',
             icon="📁"
         )
