@@ -3,11 +3,14 @@ import pandas as pd
 import numpy as np
 
 import joblib
+import sklearn
 import streamlit as st
 
 from utils import extract_features, get_recommendations
 
 
+if not hasattr(sklearn.impute.SimpleImputer, '_fill_dtype'):
+    sklearn.impute.SimpleImputer._fill_dtype = object
 
 # load model
 @st.cache_resource
