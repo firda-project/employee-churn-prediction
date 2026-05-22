@@ -3,7 +3,7 @@ import streamlit as st
 
 # navigation
 dashboard = st.Page(
-    'pages\dashboard.py',
+    'pages/dashboard.py',
     title= 'Dashboard'
 )
 nav = {
