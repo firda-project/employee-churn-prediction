@@ -14,7 +14,7 @@ from utils import extract_features, get_recommendations
 # load model
 @st.cache_resource
 def load_model():
-    return joblib.load('models\model_lr.pkl')
+    return joblib.load('models/model_lr.pkl')
 
 model_data = load_model()
 model = model_data['model_pipeline']
