@@ -379,20 +379,28 @@ legend= dict(
 )
 col1, col2, col3 = st.columns(3)
 with col1:
+    df_counts = df_plot.groupby(["distance_to_office_km", "churn"]).size().reset_index(name="count")
     with st.container(border=True):
-        fig = px.box(
-            df_plot,
-            x="churn",
-            y="distance_to_office_km", 
+        fig = px.area(
+            df_counts,
+            x="distance_to_office_km",
+            y="count",
             color="churn",
             color_discrete_map=color_discrete_map,
-            title="Commuting Distance Impact",
+            title="Distance to Office Distribution",
             labels={
-                "churn": "Churn",
-                "distance_to_office_km": "Distance to Office (KM)"
+                "distance_to_office_km": "Distance to Office (KM)",
+                "count": "Employee Count",
+                "churn": "Status"
             }
         )
-        fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), title=title, showlegend=False)
+        fig.update_layout(
+            xaxis=dict(range=[0, 50], dtick=5),
+            margin=dict(l=10, r=10, t=60, b=10),
+            title=title,
+            legend=legend
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
 
 with col2:
