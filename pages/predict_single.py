@@ -50,18 +50,24 @@ def user_inputs_features():
         value=None,
         placeholder='e.g. 10'
     )
-    job_satisfaction = st.selectbox(
+    job_satisfaction_input = st.selectbox(
         '**Job Satisfaction**',
-        options=[None, 1, 2, 3, 4], 
-        index=0,
-        format_func=lambda x: "Select Score" if x is None else x
+        options=["Select Score", "1", "2", "3", "4"],
+        index=0
     )
+    if job_satisfaction_input == "Select Score":
+        job_satisfaction = None
+    else:
+        job_satisfaction = int(job_satisfaction_input)
     manager_support_score = st.selectbox(
         '**Manager Support Score**',
-        options=[None, 1, 2, 3, 4], 
-        index=0,
-        format_func=lambda x: "Select Score" if x is None else x
+        options=["Select Score", "1", "2", "3", "4"],
+        index=0
     )
+    if manager_support_score == "Select Score":
+        manager_support_score = None
+    else:
+        manager_support_score = int(manager_support_score)
     distance_to_office_km = st.number_input(
         '**Distance to Office (km)**',
         min_value=0,
