@@ -85,7 +85,7 @@ template_data = pd.DataFrame(columns=[
 ])
 template_data.loc[0] = [100, 0.85, 55, 10, 3, 4, 12]
 
-@st.cache_data
+
 def export_to_excel(
     _df,
     sheet_name="Sheet1",
@@ -155,7 +155,7 @@ def data_prep(X):
     warnings = []
 
     # list columns
-    columns = [
+    required_columns = [
         'monthly_target',
         'target_achievement',
         'working_hours_per_week',
@@ -165,14 +165,25 @@ def data_prep(X):
         'distance_to_office_km'
     ]
 
-    # check completed columns
-    missing_cols = [col for col in columns if col not in cleaned_df.columns]
+    # clean column names
+    cleaned_df.columns = (
+        cleaned_df.columns
+        .str.strip()
+        .str.lower()
+    )
+    existing_cols = cleaned_df.columns.tolist()
+    missing_cols = [
+        col for col in required_columns
+        if col not in existing_cols
+    ]
     if missing_cols:
-        warnings.append(f"❌ **Missing Columns:** The file is missing required columns: {', '.join(missing_cols)}.")
+        warnings.append(
+            f"❌ **Missing Columns:** The file is missing required columns: {', '.join(missing_cols)}"
+        )
         return cleaned_df, warnings
 
-    # cek missing
-    initial_missing = cleaned_df[columns].isna().sum()
+    # cek missing value
+    initial_missing = cleaned_df[required_columns].isna().sum()
     total_initial_missing = initial_missing.sum()
     
     if total_initial_missing > 0:
@@ -184,24 +195,48 @@ def data_prep(X):
         # change to be string type
         target_str = cleaned_df['target_achievement'].astype(str).str.strip()
 
-        # check values using (,)
-        if target_str.str.contains(',').any():
-            cleaned_df['target_achievement'] = target_str.str.replace(',', '.', regex=False)
+        # remove characters other than numbers, periods, commas, and minus signs
+        target_str = target_str.str.replace(r'[^\d.,-]', '', regex=True)
 
-        # check values without (,) or (.)
-        try:
-            temp_float = cleaned_df['target_achievement'].astype(float)
+        # check values using (,) → replace to (.)
+        if target_str.str.contains(',').any():
+            target_str = target_str.str.replace(',', '.', regex=False)
+
+        # handle if there is more than one point (e.g. "0.8.5")
+        def fix_decimal(val):
+            parts = val.split('.')
+            if len(parts) > 2:
+                return parts[0] + '.' + ''.join(parts[1:])
+            return val
+
+        target_str = target_str.apply(fix_decimal)
+
+        # total nan before convert
+        nan_before = cleaned_df['target_achievement'].isna().sum()
+
+        # convert to numeric (failed value becomes NaN, not an immediate error)
+        cleaned_df['target_achievement'] = pd.to_numeric(target_str, errors='coerce')
+
+        # total nan after convert
+        nan_after = cleaned_df['target_achievement'].isna().sum()
+
+        # NaN increases → there is a value that failed to convert (not the original missing)
+        if nan_after > nan_before:
+            warnings.append("❌ **Format Error (Target Achievement):** Contains non-numeric text that cannot be converted.")
+        else:
+            # NaN is the same → just a regular missing value, not a format error
+            temp_float = cleaned_df['target_achievement'].dropna()
             if ((temp_float > 1.0) & (temp_float % 1 == 0)).any():
                 warnings.append("⚠️ **Format Warning (Target Achievement):** Found values greater than 1 without decimals (e.g., 85 instead of 0.85). Please use decimal format between 0.0 and 1.0.")
-        except ValueError:
-            warnings.append("❌ **Format Error (Target Achievement):** Contains non-numeric text that cannot be converted.")
 
     # data type must be numeric
-    for col in columns:
+    for col in required_columns:
         if not pd.api.types.is_numeric_dtype(cleaned_df[col]):
             try:
                 cleaned_df[col] = pd.to_numeric(cleaned_df[col], errors='coerce')
-                post_missing_count = cleaned_df.isna().sum()
+                
+                # Take missing count of specific columns, not all columns
+                post_missing_count = cleaned_df[col].isna().sum()  # ← add [col]
                 pre_missing_count = initial_missing[col]
 
                 if post_missing_count > pre_missing_count:
@@ -284,10 +319,32 @@ uploaded_file = st.file_uploader(
     "Upload your CSV or Excel file", 
     type=["csv", "xlsx"]
 )
+# initialisation
+input_df = None
+cleaned_df = None
+completed_df = None
+# final_df = None
+validation_warnings = []
+
+# upload file
 if uploaded_file is not None:
     try:
         if uploaded_file.name.endswith('.csv'):
-            input_df = pd.read_csv(uploaded_file)
+            uploaded_file.seek(0)
+            sample = uploaded_file.read(1024).decode('utf-8')
+            uploaded_file.seek(0)
+
+            # check separator
+            sep = ';' if sample.count(';') > sample.count(',') else','
+
+            # check decimal
+            if sep == ';':
+                decimal = ',' if ',' in sample.split('\n')[1] else '.'
+            else:
+                decimal = '.'
+
+            uploaded_file.seek(0)
+            input_df = pd.read_csv(uploaded_file, sep=sep, decimal=decimal)
         else:
             input_df = pd.read_excel(uploaded_file)
     # preprocessing
@@ -311,15 +368,18 @@ if uploaded_file is not None:
             st.stop() # Hentikan proses eksekusi ke model
         else:
             st.warning("You can still proceed, but the results might be inaccurate due to the issues above.")
+            button_disabled = False
     else:
         st.success("✅ Your data is complete and in accordance with the format. Click 'Run Bulk Prediction' to view the results.")
         button_disabled = False
 
     # completing data
-    completed_df = data_complete(cleaned_df)
+    if cleaned_df is not None:
+        completed_df = data_complete(cleaned_df)
     
     # feature engineering
-    final_df = extract_features(completed_df)
+    if completed_df is not None:
+        final_df = extract_features(completed_df)
     
     # predict
     st.subheader("Step 3: Run Bulk Prediction")
@@ -329,10 +389,11 @@ if uploaded_file is not None:
             probs = model.predict_proba(final_df)
             churn_prob = probs[:, 1]
 
-            results_df = input_df.copy()
+            results_df = cleaned_df.copy()
             results_df['churn_probability'] = churn_prob
             results_df = get_recommendations(results_df)
             results_df = results_df.map(lambda x: x.replace('**', '')  if isinstance(x, str) else x)
+            results_df['churn_probability'] = [f"{p:.2%}" for p in churn_prob]
 
             st.markdown("🎉 **Prediction Results**")
             # Replace the \n with an HTML linebreak
