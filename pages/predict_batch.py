@@ -168,8 +168,11 @@ def data_prep(X):
     # clean column names
     cleaned_df.columns = (
         cleaned_df.columns
-        .str.strip()
-        .str.lower()
+        .str.strip()                          # ' monthly_target '  → 'monthly_target'
+        .str.lower()                          # 'Monthly_Target'    → 'monthly_target'
+        .str.replace(' ', '_', regex=False)   # 'monthly target'    → 'monthly_target'
+        .str.replace('-', '_', regex=False)   # 'monthly-target'    → 'monthly_target'
+        .str.replace(r'_+', '_', regex=True)  # 'monthly__target'   → 'monthly_target' (jaga-jaga double underscore)
     )
     existing_cols = cleaned_df.columns.tolist()
     missing_cols = [
