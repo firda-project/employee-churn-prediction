@@ -257,12 +257,14 @@ def data_prep(X):
         if col in cleaned_df.columns:
             col_data = cleaned_df[col].dropna()
 
-            # < 1 → error
-            below_min = cleaned_df[cleaned_df[col] < 1][col].dropna()
-            if not below_min.empty:
+            # out of range → error
+            invalid_rows = cleaned_df[(cleaned_df[col] < 1) | (cleaned_df[col] > 5)]
+            
+            if not invalid_rows.empty:
+                invalid_values = invalid_rows[col].dropna().unique()
                 warnings.append(
-                    f"❌ **Out of Range ({col}):** Found values below minimum {list(below_min.unique())}. "
-                    f"The score must be between **1 and 4** (1: Lowest, 4: Highest)."
+                    f"❌ **Out of Range ({col}):** Found invalid scores {list(invalid_values)}. "
+                    f"The score must be an integer between **1 and 4** (1: Lowest, 4: Highest)."
                 )
 
             # = 5 → warning, still tolerated
@@ -272,14 +274,6 @@ def data_prep(X):
                     f"⚠️ **Out of Range ({col}):** Found values of 5 {list(equal_five.unique())}. "
                     f"This is outside the standard range but still tolerated. "
                     f"For best accuracy, use scores between **1 and 4** (1: Lowest, 4: Highest)."
-                )
-
-            # > 5 → warning, must fix
-            above_five = cleaned_df[cleaned_df[col] > 5][col].dropna()
-            if not above_five.empty:
-                warnings.append(
-                    f"❌ **Out of Range ({col}):** Found values above 5 {list(above_five.unique())}. "
-                    f"The score must be between **1 and 4** (1: Lowest, 4: Highest) for accurate predictions."
                 )
 
     # validate no negative values (except unachieved_target)
