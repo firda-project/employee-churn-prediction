@@ -12,9 +12,11 @@ License -->
 
 ---
 ## Preview
-![Preview](https://res.cloudinary.com/dtwqkecvp/image/upload/v1780028989/dashboard_uzmnqj.png)
+![Preview](https://res.cloudinary.com/dtwqkecvp/image/upload/v1780049783/new_dashboard_fz3lie.png)
 
 
+---
+> 🚀 Try it live: [TalentPulse Dashboard](https://talentpulse-blackbox.streamlit.app/)
 ---
 
 ## Key Modules
