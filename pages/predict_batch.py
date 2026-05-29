@@ -276,8 +276,9 @@ def data_prep(X):
                     f"For best accuracy, use scores between **1 and 4** (1: Lowest, 4: Highest)."
                 )
 
-    # validate no negative values (except unachieved_target)
-    cols_to_check = [col for col in required_columns if col != 'unachieved_target']
+    # validate no negative values (except unachieved_target, job_satisfaction, manager_support_score)
+    exclude_cols = ['unachieved_target', 'job_satisfaction', 'manager_support_score']
+    cols_to_check = [col for col in required_columns if col not in exclude_cols]
     for col in cols_to_check:
         if col in cleaned_df.columns:
             negative_rows = cleaned_df[cleaned_df[col] < 0][col].dropna()
